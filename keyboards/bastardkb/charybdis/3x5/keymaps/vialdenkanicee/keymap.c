@@ -52,11 +52,18 @@ static uint16_t auto_pointer_layer_timer = 0;
 #define BSP_NUM LT(LAYER_NUMERAL, KC_BSPC)
 #define _L_PTR(KC) LT(LAYER_POINTER, KC)
 
+#ifndef POINTING_DEVICE_ENABLE
+#    define DRGSCRL KC_NO
+#    define DPI_MOD KC_NO
+#    define S_D_MOD KC_NO
+#    define SNIPING KC_NO
+#endif // !POINTING_DEVICE_ENABLE
+
 // clang-format off
 /** \brief QWERTY layout (3 rows, 10 columns). */
 #define LAYOUT_LAYER_BASE                                                                     \
        KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P, \
-       KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L, KC_SCLN, \
+       KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L, KC_QUOT, \
        KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M, KC_COMM,  KC_DOT, KC_SLSH, \
                       ESC_MED, SPC_NAV, TAB_FUN, ENT_SYM, BSP_NUM
 
@@ -85,7 +92,7 @@ static uint16_t auto_pointer_layer_timer = 0;
  */
 #define LAYOUT_LAYER_FUNCTION                                                                 \
     _______________DEAD_HALF_ROW_______________, KC_PSCR,   KC_F7,   KC_F8,   KC_F9,  KC_F12, \
-    ______________HOME_ROW_GACS_L______________, KC_SLCK,   KC_F4,   KC_F5,   KC_F6,  KC_F11, \
+    ______________HOME_ROW_GACS_L______________, KC_SCRL,   KC_F4,   KC_F5,   KC_F6,  KC_F11, \
     _______________DEAD_HALF_ROW_______________, KC_PAUS,   KC_F1,   KC_F2,   KC_F3,  KC_F10, \
                       XXXXXXX, XXXXXXX, _______, XXXXXXX, XXXXXXX
 
@@ -98,14 +105,14 @@ static uint16_t auto_pointer_layer_timer = 0;
 #define LAYOUT_LAYER_MEDIA                                                                    \
     XXXXXXX,RGB_RMOD, RGB_TOG, RGB_MOD, XXXXXXX, XXXXXXX,RGB_RMOD, RGB_TOG, RGB_MOD, XXXXXXX, \
     KC_MPRV, KC_VOLD, KC_MUTE, KC_VOLU, KC_MNXT, KC_MPRV, KC_VOLD, KC_MUTE, KC_VOLU, KC_MNXT, \
-    XXXXXXX, XXXXXXX, XXXXXXX, EEP_RST,   RESET,   RESET, EEP_RST, XXXXXXX, XXXXXXX, XXXXXXX, \
+    XXXXXXX, XXXXXXX, XXXXXXX,  EE_CLR, QK_BOOT, QK_BOOT,  EE_CLR, XXXXXXX, XXXXXXX, XXXXXXX, \
                       _______, KC_MPLY, KC_MSTP, KC_MSTP, KC_MPLY
 
 /** \brief Mouse emulation and pointer functions. */
 #define LAYOUT_LAYER_POINTER                                                                  \
-    XXXXXXX, XXXXXXX, XXXXXXX, DPI_MOD, S_D_MOD, S_D_MOD, DPI_MOD, XXXXXXX, XXXXXXX, XXXXXXX, \
+    QK_BOOT,  EE_CLR, XXXXXXX, DPI_MOD, S_D_MOD, S_D_MOD, DPI_MOD, XXXXXXX,  EE_CLR, QK_BOOT, \
     ______________HOME_ROW_GACS_L______________, ______________HOME_ROW_GACS_R______________, \
-    _______, DRGSCRL, SNIPING, EEP_RST,   RESET,   RESET, EEP_RST, SNIPING, DRGSCRL, _______, \
+    _______, DRGSCRL, SNIPING, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, SNIPING, DRGSCRL, _______, \
                       KC_BTN2, KC_BTN1, KC_BTN3, KC_BTN3, KC_BTN1
 
 /**
@@ -118,7 +125,7 @@ static uint16_t auto_pointer_layer_timer = 0;
  */
 #define LAYOUT_LAYER_NAVIGATION                                                               \
     _______________DEAD_HALF_ROW_______________, _______________DEAD_HALF_ROW_______________, \
-    ______________HOME_ROW_GACS_L______________, KC_CLCK, KC_LEFT, KC_DOWN,   KC_UP, KC_RGHT, \
+    ______________HOME_ROW_GACS_L______________, KC_CAPS, KC_LEFT, KC_DOWN,   KC_UP, KC_RGHT, \
     _______________DEAD_HALF_ROW_______________,  KC_INS, KC_HOME, KC_PGDN, KC_PGUP,  KC_END, \
                       XXXXXXX, _______, XXXXXXX,  KC_ENT, KC_BSPC
 
@@ -193,7 +200,7 @@ static uint16_t auto_pointer_layer_timer = 0;
       __VA_ARGS__
 #define POINTER_MOD(...) _POINTER_MOD(__VA_ARGS__)
 
-#define LAYOUT_wrapper(...) LAYOUT_charybdis_3x5(__VA_ARGS__)
+#define LAYOUT_wrapper(...) LAYOUT(__VA_ARGS__)
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [LAYER_BASE] = LAYOUT_wrapper(
@@ -229,7 +236,7 @@ void matrix_scan_user(void) {
         auto_pointer_layer_timer = 0;
         layer_off(LAYER_POINTER);
 #        ifdef RGB_MATRIX_ENABLE
-        rgb_matrix_mode_noeeprom(RGB_MATRIX_STARTUP_MODE);
+        rgb_matrix_mode_noeeprom(RGB_MATRIX_DEFAULT_MODE);
 #        endif // RGB_MATRIX_ENABLE
     }
 }
@@ -244,18 +251,7 @@ layer_state_t layer_state_set_user(layer_state_t state) {
 #endif     // POINTING_DEVICE_ENABLE
 
 #ifdef RGB_MATRIX_ENABLE
-// Forward-declare this helper function since it is defined in rgb_matrix.c.
+// Forward-declare this helper function since it is defined in
+// rgb_matrix.c.
 void rgb_matrix_update_pwm_buffers(void);
 #endif
-
-void shutdown_user(void) {
-#ifdef RGBLIGHT_ENABLE
-    rgblight_enable_noeeprom();
-    rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
-    rgblight_setrgb_red();
-#endif // RGBLIGHT_ENABLE
-#ifdef RGB_MATRIX_ENABLE
-    rgb_matrix_set_color_all(RGB_RED);
-    rgb_matrix_update_pwm_buffers();
-#endif // RGB_MATRIX_ENABLE
-}
